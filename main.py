@@ -8,22 +8,31 @@ from dotenv import load_dotenv
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 intents = discord.Intents(messages=True, guilds=True, reactions=True, members=True, presences=True)
 client = commands.Bot(command_prefix='!', intents=intents)
 client.author_id = 538808063122079744
-db = firestore.client()
 
 
 @client.event
 async def on_ready():
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="!help"))
     print('Bot is ready')
+    # creates muted role if it doesnt exist
+    guild = client.get_guild(804313983594004521)
+    muted_role = discord.utils.get(guild.roles, name='muted')
+    if not muted_role:
+        muted_role = await guild.create_role(name='muted')
+    for channel in guild.text_channels:
+        await channel.set_permissions(muted_role, send_messages=False)
+    for channel in guild.voice_channels:
+        await channel.set_permissions(muted_role, speak=False)
 
 
 @client.event
 async def on_command_error(ctx, error):
-    await ctx.send(f'`{error}`')
+    await ctx.send(f'`〉{error}`')
 
 
 @client.command()
@@ -38,7 +47,7 @@ async def load(ctx, extension):
 async def unload(ctx, extension):
     if ctx.message.author.id == client.author_id:
         client.unload_extension(f'cogs.{extension}')
-        await ctx.send(f'Module *{extension}* is unloaded.')
+        await ctx.send(f'Module **{extension}** is unloaded.')
 
 
 @client.command()
@@ -47,12 +56,12 @@ async def reload(ctx, extension):
     if ctx.message.author.id == client.author_id:
         client.unload_extension(f'cogs.{extension}')
         client.load_extension(f'cogs.{extension}')
-        await ctx.send(f'Module *{extension}* was reloaded.')
+        await ctx.send(f'Module **{extension}** was reloaded.')
 
 
 @client.command()
 async def ping(ctx):
-    await ctx.send(f'Pong {round(client.latency * 1000)} ms')
+    await ctx.send(f'`〉Pong: {round(client.latency * 1000)} ms`')
 
 
 for filename in os.listdir('./cogs'):
