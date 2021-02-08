@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 import discord
 from discord.ext import commands
 from pytimeparse import parse
@@ -10,7 +12,7 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print('〉Moderation module ready')
+        logging.info('〉Moderation module ready')
 
     @commands.command()
     @commands.has_permissions(manage_messages=True)

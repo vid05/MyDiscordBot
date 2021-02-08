@@ -1,3 +1,5 @@
+import logging
+
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -5,6 +7,8 @@ import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO)
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
@@ -18,7 +22,7 @@ client.author_id = 538808063122079744
 @client.event
 async def on_ready():
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="!help"))
-    print('Bot is ready')
+    logging.info('Bot is ready')
     # creates muted role if it doesnt exist
     guild = client.get_guild(804313983594004521)
     muted_role = discord.utils.get(guild.roles, name='muted')
