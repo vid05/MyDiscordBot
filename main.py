@@ -1,18 +1,10 @@
 import logging
-
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
 import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
-
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
-db = firestore.client()
 
 intents = discord.Intents(messages=True, guilds=True, reactions=True, members=True, presences=True)
 client = commands.Bot(command_prefix='!', intents=intents)
