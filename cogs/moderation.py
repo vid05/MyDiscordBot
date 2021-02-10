@@ -11,19 +11,31 @@ class Moderation(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    async def log_event(self, event_name, event_description):
+        guild = self.client.get_guild(804313983594004521)
+        logging_channel = guild.get_channel(804345250675294219)
+        embed = discord.Embed(
+            title=event_name,
+            description=event_description
+        )
+        embed.timestamp = datetime.now()
+        await logging_channel.send(embed=embed)
+
+    async def check_for_moderator(self, ctx, member, action):
+        guild = self.client.get_guild(804313983594004521)
+        moderator_role = discord.utils.get(guild.roles, name='Mod')
+        admin_role = discord.utils.get(guild.roles, name='Admin')
+        owner_role = discord.utils.get(guild.roles, name='Owner')
+        member_roles = member.roles
+        if moderator_role in member_roles or admin_role in member_roles or owner_role in member_roles:
+            await ctx.send(f'`You cant {action} this user.`')
+            return False
+        else:
+            return True
+
     @commands.Cog.listener()
     async def on_ready(self):
         logging.info('〉Moderation module ready')
-
-    async def log_event(self, event_name, event_description):
-        embed = discord.Embed(
-            title=event_name,
-            description=f'{event_description}'
-        )
-        embed.timestamp = datetime.now()
-        guild = self.client.get_guild(804313983594004521)
-        logging_channel = guild.get_channel(804345250675294219)
-        await logging_channel.send(embed=embed)
 
     @commands.command()
     @commands.has_permissions(manage_messages=True)
@@ -38,26 +50,29 @@ class Moderation(commands.Cog):
     @commands.command()
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, reason=None):
-        await member.send(f'`〉You were kicked from {ctx.guild.name}.`')
-        await member.kick(reason=reason)
-        await ctx.send(f'`〉{member} was kicked.`')
-        await self.log_event('Kick', f'{ctx.message.author} kicked {member}. Reason: {reason}')
+        if await self.check_for_moderator(ctx, member, 'kick'):
+            await member.send(f'`〉You were kicked from {ctx.guild.name}.`')
+            await member.kick(reason=reason)
+            await ctx.send(f'`〉{member} was kicked.`')
+            await self.log_event('Kick', f'{ctx.message.author} kicked {member}. Reason: {reason}')
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member: discord.Member, reason=None):
-        await member.send(f'`〉You were banned from {ctx.guild.name}.`')
-        await member.ban(reason=reason)
-        await ctx.send(f'`〉{member} was banned.`')
-        await self.log_event('Ban', f'{ctx.message.author} banned {member}. Reason: {reason}')
+        if await self.check_for_moderator(ctx, member, 'ban'):
+            await member.send(f'`〉You were banned from {ctx.guild.name}.`')
+            await member.ban(reason=reason)
+            await ctx.send(f'`〉{member} was banned.`')
+            await self.log_event('Ban', f'{ctx.message.author} banned {member}. Reason: {reason}')
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
     async def tempban(self, ctx, member: discord.Member, duration: str, reason=None):
-        await member.send(f'`〉You were banned from {ctx.guild.name} for {duration}.`')
-        await member.ban(reason=reason)
-        await ctx.send(f'`〉{member} was banned for {duration}.`')
-        await self.log_event('Tempban', f'{ctx.message.author} banned {member} for {duration}. Reason: {reason}')
+        if await self.check_for_moderator(ctx, member, 'ban'):
+            await member.send(f'`〉You were banned from {ctx.guild.name} for {duration}.`')
+            await member.ban(reason=reason)
+            await ctx.send(f'`〉{member} was banned for {duration}.`')
+            await self.log_event('Tempban', f'{ctx.message.author} banned {member} for {duration}. Reason: {reason}')
 
     @commands.command()
     @commands.has_permissions(ban_members=True)
@@ -76,17 +91,17 @@ class Moderation(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_roles=True)
     async def mute(self, ctx, member: discord.Member, duration: str = None, reason=None):
-        muted_role = discord.utils.get(ctx.guild.roles, name='muted')
-        await member.send(f'`〉You were muted in {ctx.guild.name}. Duration: {duration}.`')
-        await member.add_roles(muted_role, reason=reason)
-        await ctx.send(f'`〉{member} was muted. Duration: {duration}.`')
-        await self.log_event('Mute', f'{ctx.message.author} muted {member}. Duration: {duration}. Reason: {reason}')
+        if await self.check_for_moderator(ctx, member, 'mute'):
+            muted_role = discord.utils.get(ctx.guild.roles, name='muted')
+            await member.send(f'`〉You were muted in {ctx.guild.name}. Duration: {duration}.`')
+            await member.add_roles(muted_role, reason=reason)
+            await ctx.send(f'`〉{member} was muted. Duration: {duration}.`')
+            await self.log_event('Mute', f'{ctx.message.author} muted {member}. Duration: {duration}. Reason: {reason}')
 
-        if duration is not None:
-            await asyncio.sleep(parse(duration))
-            await member.remove_roles(muted_role)
-            await member.send(f'`〉You are now unmuted in {ctx.guild.name}.`')
-
+            if duration is not None:
+                await asyncio.sleep(parse(duration))
+                await member.remove_roles(muted_role)
+                await member.send(f'`〉You are now unmuted in {ctx.guild.name}.`')
 
     @commands.command()
     @commands.has_permissions(manage_roles=True)
@@ -100,41 +115,46 @@ class Moderation(commands.Cog):
     @commands.command()
     @commands.has_permissions(manage_messages=True)
     async def warn(self, ctx, member: discord.Member, *, warning: str):
-        await member.send(f'`〉Warning: {warning}.`')
-        await ctx.send(f'`〉{member} was warned.`')
-        await self.log_event('Warn', f'{ctx.message.author} warned {member}. Warning: {warning}')
+        if await self.check_for_moderator(ctx, member, 'warn'):
+            await member.send(f'`〉Warning: {warning}.`')
+            await ctx.send(f'`〉{member} was warned.`')
+            await self.log_event('Warn', f'{ctx.message.author} warned {member}. Warning: {warning}')
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def lock(self, ctx, channel: discord.TextChannel, duration: str = None):
-        channel = channel or ctx.channel
-        overwrite = channel.overwrites_for(ctx.guild.default_role)
-        overwrite.send_messages = False
-        await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
-        await ctx.send(f'`〉{channel} is locked.`')
-        await self.log_event('Channel Lock', f'{ctx.message.author} locked {channel}. Duration: {duration}')
-        if duration is not None:
-            await asyncio.sleep(parse(duration))
-            await channel.set_permissions(ctx.guild.default_role, send_messages=True)
-            await ctx.send(f'`〉{channel} is unlocked.`')
-
+        if channel.category.id == 804339013418483812:
+            channel = channel or ctx.channel
+            overwrite = channel.overwrites_for(ctx.guild.default_role)
+            overwrite.send_messages = False
+            await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
+            await ctx.send(f'`〉{channel} is locked.`')
+            await self.log_event('Channel Lock', f'{ctx.message.author} locked {channel}. Duration: {duration}')
+            if duration is not None:
+                await asyncio.sleep(parse(duration))
+                await channel.set_permissions(ctx.guild.default_role, send_messages=True)
+                await ctx.send(f'`〉{channel} is unlocked.`')
+        else:
+            await ctx.send('`〉You cant lock this channel.`')
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def unlock(self, ctx, channel: discord.TextChannel):
-        channel = channel or ctx.channel
-        await channel.set_permissions(ctx.guild.default_role, send_messages=True)
-        await ctx.send(f'`〉{channel} is unlocked.`')
-        await self.log_event('Channel Unlock', f'{ctx.message.author} unlocked {channel}.')
+        if channel.category.id == 804339013418483812:
+            channel = channel or ctx.channel
+            await channel.set_permissions(ctx.guild.default_role, send_messages=True)
+            await ctx.send(f'`〉{channel} is unlocked.`')
+            await self.log_event('Channel Unlock', f'{ctx.message.author} unlocked {channel}.')
+
+        else:
+            await ctx.send('`〉You cant unlock this channel.`')
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
     async def lockdown(self, ctx):
         for channel in ctx.guild.text_channels:
-            await channel.set_permissions(ctx.guild.default_role, send_messages=False)
-
-        for channel in ctx.guild.voice_channels:
-            await channel.set_permissions(ctx.guild.default_role, speak=False)
+            if channel.category.id == 804339013418483812:
+                await channel.set_permissions(ctx.guild.default_role, send_messages=False)
 
         await ctx.send('`〉All channels are locked.`')
         await self.log_event('Lockdown', f'{ctx.message.author} started lockdown.')
@@ -143,14 +163,11 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_channels=True)
     async def endlockdown(self, ctx):
         for channel in ctx.guild.text_channels:
-            await channel.set_permissions(ctx.guild.default_role, send_messages=True)
-
-        for channel in ctx.guild.voice_channels:
-            await channel.set_permissions(ctx.guild.default_role, speak=True)
+            if channel.category.id == 804339013418483812:
+                await channel.set_permissions(ctx.guild.default_role, send_messages=True)
 
         await ctx.send('`〉All channels are unlocked.`')
         await self.log_event('Lockdown End', f'{ctx.message.author} ended lockdown.')
-        # todo fix so it doesnt unlock staff channels
 
 
 def setup(client):

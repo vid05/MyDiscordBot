@@ -88,3 +88,5 @@ class BotOrders(commands.Cog):
 
 def setup(client):
     client.add_cog(BotOrders(client=client))
+
+# todo restrict orders to our plans
