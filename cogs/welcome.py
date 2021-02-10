@@ -1,24 +1,27 @@
 import discord
 from discord.ext import commands
 from database_setup import db
+import logging
 
 
 class Welcome(commands.Cog):
     def __init__(self, client):
         self.client = client
-        self.welcome_channel = None
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print('Welcome module ready')
+        logging.info('〉Welcome module ready')
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        guild = self.client.get_guild(804313983594004521)
+        member_role = discord.utils.get(guild.roles, name='Member')
         data = {
             'name': str(member),
             'strikes': 0
         }
         db.collection('members').document(str(member.id)).set(data)
+        await member.add_roles(member_role)
         embed = discord.Embed(
             title='WELCOME',
             description=member.mention,
@@ -30,8 +33,7 @@ class Welcome(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
-        pass
-    # todo on leave delete users data from database
+        db.collection('members').document(str(member.id)).delete()
 
 
 def setup(client):
